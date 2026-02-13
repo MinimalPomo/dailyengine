@@ -222,7 +222,7 @@ const App = () => {
         <header className="bg-zinc-900 text-white p-6 border-b-2 border-zinc-900">
           <div className="flex justify-between items-start mb-6">
             <div className="space-y-3">
-              <h1 className="text-3xl font-black tracking-tighter uppercase italic leading-none">Daily Engine</h1>
+              <h1 className="font-heading text-3xl tracking-tighter uppercase italic">Daily Engine</h1>
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-2 bg-white/10 px-2 py-1 rounded text-[10px] font-mono border border-white/20">
                   <Calendar size={12} className="text-amber-400" />
