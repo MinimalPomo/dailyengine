@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   CheckCircle2, 
   Calendar, 
@@ -12,7 +13,8 @@ import {
   BellOff,
   BarChart3,
   X,
-  History
+  History,
+  ChevronRight
 } from 'lucide-react';
 
 const App = () => {
@@ -165,36 +167,56 @@ const App = () => {
   }, [history]);
 
   return (
-    <div className="min-h-screen bg-white text-zinc-900 font-sans p-2 md:p-8">
-      <div className="max-w-2xl mx-auto border-2 border-zinc-900 shadow-[8px_8px_0px_0px_rgba(24,24,27,1)] overflow-hidden relative">
+    <div className="min-h-screen bg-[#f0f0f0] text-zinc-900 font-sans p-2 md:p-8 selection:bg-amber-200">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="max-w-2xl mx-auto border-2 border-zinc-900 shadow-[8px_8px_0px_0px_rgba(24,24,27,1)] bg-white overflow-hidden relative"
+      >
         
         {/* Analytics Overlay */}
-        {showAnalytics && (
-          <div className="absolute inset-0 z-50 bg-white border-b-2 border-zinc-900 flex flex-col animate-in slide-in-from-top duration-300">
-            <div className="p-6 bg-zinc-900 text-white flex justify-between items-center">
-              <div className="flex items-center gap-2 text-amber-400"><BarChart3 size={20}/><h2 className="text-2xl font-black uppercase italic tracking-tighter text-white">Performance Lab</h2></div>
-              <button onClick={() => setShowAnalytics(false)} className="bg-white text-zinc-900 p-1 border-2 border-zinc-900"><X size={20} /></button>
-            </div>
-            <div className="p-6 flex-grow overflow-y-auto space-y-6">
-              <div className="border-2 border-zinc-900 p-6 bg-zinc-50 shadow-[4px_4px_0px_0px_rgba(24,24,27,1)]">
-                <h3 className="text-xs font-black uppercase mb-8 flex items-center gap-2 text-zinc-500"><History size={14} /></h3>
-                <div className="h-48 flex items-end justify-between gap-1 md:gap-2 px-1">
-                  {analyticsData.map((day, idx) => (
-                    <div key={idx} className="flex-1 flex flex-col items-center group relative h-full justify-end">
-                      <div className="absolute -top-6 bg-zinc-900 text-white text-[10px] px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity font-mono z-10">{day.value}%</div>
-                      <div className={`w-full border-2 border-zinc-900 transition-all duration-700 ${day.isToday ? 'bg-amber-400' : 'bg-zinc-300'}`} style={{ height: `${Math.max(day.value, 5)}%` }} />
-                      <span className={`text-[9px] md:text-[10px] font-black uppercase mt-2 ${day.isToday ? 'text-zinc-900' : 'text-zinc-400'}`}>{day.label}</span>
-                    </div>
-                  ))}
+        <AnimatePresence>
+          {showAnalytics && (
+            <motion.div 
+              initial={{ y: "-100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "-100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="absolute inset-0 z-50 bg-white flex flex-col"
+            >
+              <div className="p-6 bg-zinc-900 text-white flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <BarChart3 size={20} className="text-amber-400" />
+                  <h2 className="text-2xl font-black uppercase italic tracking-tighter">Performance Lab</h2>
+                </div>
+                <button onClick={() => setShowAnalytics(false)} className="bg-white text-zinc-900 p-1 border-2 border-zinc-900"><X size={20} /></button>
+              </div>
+              <div className="p-6 flex-grow overflow-y-auto space-y-6">
+                <div className="border-2 border-zinc-900 p-6 bg-zinc-50 shadow-[4px_4px_0px_0px_rgba(24,24,27,1)]">
+                  <h3 className="text-xs font-black uppercase mb-8 flex items-center gap-2 text-zinc-500"><History size={14} /> 7-Day Completion Rate</h3>
+                  <div className="h-48 flex items-end justify-between gap-1 md:gap-2 px-1">
+                    {analyticsData.map((day, idx) => (
+                      <div key={idx} className="flex-1 flex flex-col items-center group relative h-full justify-end">
+                        <div className="absolute -top-6 bg-zinc-900 text-white text-[10px] px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity font-mono z-10">{day.value}%</div>
+                        <motion.div 
+                          initial={{ height: 0 }}
+                          animate={{ height: `${Math.max(day.value, 5)}%` }}
+                          transition={{ delay: idx * 0.1 }}
+                          className={`w-full border-2 border-zinc-900 transition-all ${day.isToday ? 'bg-amber-400' : 'bg-zinc-300'}`} 
+                        />
+                        <span className={`text-[9px] md:text-[10px] font-black uppercase mt-2 ${day.isToday ? 'text-zinc-900' : 'text-zinc-400'}`}>{day.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="border-2 border-zinc-900 p-4 bg-emerald-50"><p className="text-[10px] font-black uppercase text-emerald-700">Streak</p><p className="text-3xl font-black italic">{streakCount} Days</p></div>
+                  <div className="border-2 border-zinc-900 p-4 bg-amber-50"><p className="text-[10px] font-black uppercase text-amber-700">Avg Load</p><p className="text-3xl font-black italic">{Math.round(analyticsData.reduce((acc, curr) => acc + curr.value, 0) / 7)}%</p></div>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="border-2 border-zinc-900 p-4 bg-emerald-50"><p className="text-[10px] font-black uppercase text-emerald-700 text-center">Streak</p><p className="text-3xl font-black italic text-center">{streakCount} Days</p></div>
-                <div className="border-2 border-zinc-900 p-4 bg-amber-50"><p className="text-[10px] font-black uppercase text-amber-700 text-center">Weekly Avg</p><p className="text-3xl font-black italic text-center">{Math.round(analyticsData.reduce((acc, curr) => acc + curr.value, 0) / 7)}%</p></div>
-              </div>
-            </div>
-          </div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Header */}
         <header className="bg-zinc-900 text-white p-6 border-b-2 border-zinc-900">
@@ -213,48 +235,90 @@ const App = () => {
               </div>
             </div>
             <div className="text-right">
-              <div className="text-4xl font-mono font-black tracking-tight">{currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</div>
+              <motion.div 
+                key={currentTime.getMinutes()}
+                initial={{ y: -10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                className="text-4xl font-mono font-black tracking-tight"
+              >
+                {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+              </motion.div>
               <div className="text-[10px] font-bold opacity-60 uppercase">{currentTime.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}</div>
             </div>
           </div>
           <div className="space-y-2">
             <div className="flex justify-between text-[10px] font-black uppercase tracking-widest"><span>Day Completion</span><span>{progress}%</span></div>
-            <div className="w-full bg-zinc-800 h-4 border-2 border-white overflow-hidden"><div className="h-full bg-amber-400 transition-all duration-500" style={{ width: `${progress}%` }} /></div>
+            <div className="w-full bg-zinc-800 h-4 border-2 border-white overflow-hidden">
+              <motion.div 
+                className="h-full bg-amber-400" 
+                initial={{ width: 0 }}
+                animate={{ width: `${progress}%` }}
+                transition={{ type: "spring", stiffness: 50, damping: 20 }}
+              />
+            </div>
           </div>
         </header>
 
         {/* Current Priority */}
-        <div className="p-5 bg-amber-50 border-b-2 border-zinc-900 flex justify-between items-center">
+        <motion.div 
+          layout
+          className="p-5 bg-amber-50 border-b-2 border-zinc-900 flex justify-between items-center"
+        >
           <div>
-            <div className="flex items-center gap-2 mb-1"><div className="w-2 h-2 rounded-full bg-zinc-900 animate-pulse" /><span className="text-[10px] font-black uppercase text-zinc-600 tracking-wider">Current Priority</span></div>
-            <h2 className="text-xl font-black uppercase italic leading-none">{currentTask.label}</h2>
+            <div className="flex items-center gap-2 mb-1">
+              <motion.div animate={{ opacity: [1, 0.4, 1] }} transition={{ repeat: Infinity, duration: 2 }} className="w-2 h-2 rounded-full bg-zinc-900" />
+              <span className="text-[10px] font-black uppercase text-zinc-600 tracking-wider">Current Priority</span>
+            </div>
+            <AnimatePresence mode="wait">
+              <motion.h2 key={currentTask.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="text-xl font-black uppercase italic leading-none">{currentTask.label}</motion.h2>
+            </AnimatePresence>
             <p className="font-mono text-xs mt-1 font-bold">{currentTask.time} — {currentTask.end}</p>
           </div>
           <div className="bg-zinc-900 text-white p-3 border-2 border-zinc-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)]">{currentTask.icon}</div>
-        </div>
+        </motion.div>
 
-        {/* Timeline Grid Layout - Corrected for alignment */}
+        {/* Timeline Grid: FIXED ALIGNMENT */}
         <div className="p-0">
-          {activeSchedule.map((item) => {
-            const isCompleted = completedTasks.includes(item.id);
-            const isCurrent = currentTask.id === item.id;
-            return (
-              <div key={item.id} onClick={() => toggleTask(item.id)} className={`grid grid-cols-[75px_1fr] border-b-2 border-zinc-900 last:border-b-0 cursor-pointer transition-colors ${isCurrent ? 'bg-zinc-100' : isCompleted ? 'bg-zinc-50' : 'bg-white hover:bg-zinc-50'}`}>
-                <div className={`p-3 font-mono text-[10px] font-black border-r-2 border-zinc-900 flex flex-col justify-center items-center gap-1 ${isCurrent ? 'bg-zinc-900 text-white' : 'text-zinc-500'}`}>
-                  <span>{item.time}</span>
-                  <div className={`w-full h-[1px] ${isCurrent ? 'bg-white/20' : 'bg-zinc-200'}`} />
-                  <span>{item.end}</span>
-                </div>
-                <div className={`p-4 flex items-center gap-3 overflow-hidden ${isCompleted ? 'opacity-40 grayscale' : ''}`}>
-                  <div className={`shrink-0 p-2 border-2 border-zinc-900 bg-white ${isCurrent ? 'shadow-[3px_3px_0px_0px_rgba(24,24,27,1)]' : ''}`}>{item.icon}</div>
-                  <div className="min-w-0 flex-grow"><h3 className={`font-black uppercase text-xs truncate ${isCurrent ? 'text-zinc-900' : 'text-zinc-700'} ${isCompleted ? 'line-through' : ''}`}>{item.label}</h3><p className="text-[9px] font-mono font-bold text-zinc-400 tracking-tighter">{item.type.toUpperCase()} BLOCK</p></div>
-                  <div className={`shrink-0 w-6 h-6 border-2 border-zinc-900 flex items-center justify-center transition-all ${isCompleted ? 'bg-zinc-900' : 'bg-white'}`}>{isCompleted && <CheckCircle2 size={14} className="text-white" />}</div>
-                </div>
-              </div>
-            );
-          })}
+          <AnimatePresence>
+            {activeSchedule.map((item, idx) => {
+              const isCompleted = completedTasks.includes(item.id);
+              const isCurrent = currentTask.id === item.id;
+              return (
+                <motion.div 
+                  layout
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: idx * 0.03 }}
+                  key={item.id} 
+                  onClick={() => toggleTask(item.id)} 
+                  className={`grid grid-cols-[90px_1fr] border-b-2 border-zinc-900 last:border-b-0 cursor-pointer transition-colors relative ${isCurrent ? 'bg-zinc-100' : isCompleted ? 'bg-zinc-50' : 'bg-white hover:bg-zinc-50'}`}
+                >
+                  <div className={`p-3 font-mono text-[10px] font-black border-r-2 border-zinc-900 flex flex-col justify-center items-center gap-1 ${isCurrent ? 'bg-zinc-900 text-white' : 'text-zinc-500'}`}>
+                    <span>{item.time}</span>
+                    <div className={`w-full h-[1px] ${isCurrent ? 'bg-white/20' : 'bg-zinc-200'}`} />
+                    <span>{item.end}</span>
+                  </div>
+                  <div className={`p-4 flex items-center gap-3 overflow-hidden ${isCompleted ? 'opacity-40 grayscale' : ''}`}>
+                    <div className={`shrink-0 p-2 border-2 border-zinc-900 bg-white ${isCurrent ? 'shadow-[3px_3px_0px_0px_rgba(24,24,27,1)]' : ''}`}>{item.icon}</div>
+                    <div className="min-w-0 flex-grow">
+                      <h3 className={`font-black uppercase text-xs truncate ${isCurrent ? 'text-zinc-900' : 'text-zinc-700'} ${isCompleted ? 'line-through' : ''}`}>{item.label}</h3>
+                      <p className="text-[9px] font-mono font-bold text-zinc-400 tracking-tighter">{item.type.toUpperCase()} BLOCK</p>
+                    </div>
+                    <motion.div 
+                      initial={false}
+                      animate={{ backgroundColor: isCompleted ? "#18181b" : "#ffffff" }}
+                      className={`shrink-0 w-6 h-6 border-2 border-zinc-900 flex items-center justify-center`}
+                    >
+                      {isCompleted && <CheckCircle2 size={14} className="text-white" />}
+                    </motion.div>
+                  </div>
+                  {isCurrent && <motion.div layoutId="active-marker" className="absolute left-0 top-0 bottom-0 w-1 bg-amber-400 z-10" />}
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
         </div>
-      </div>
+      </motion.div>
 
       {/* Footer */}
       <div className="max-w-2xl mx-auto mt-6 flex justify-between items-center px-2">
@@ -266,4 +330,5 @@ const App = () => {
 };
 
 export default App;
-                
+
+       
