@@ -177,7 +177,7 @@ const App = () => {
             </div>
             <div className="p-6 flex-grow overflow-y-auto space-y-6">
               <div className="border-2 border-zinc-900 p-6 bg-zinc-50 shadow-[4px_4px_0px_0px_rgba(24,24,27,1)]">
-                <h3 className="text-xs font-black uppercase mb-8 flex items-center gap-2 text-zinc-500"><History size={14} /> 7-Day Completion Rate</h3>
+                <h3 className="text-xs font-black uppercase mb-8 flex items-center gap-2 text-zinc-500"><History size={14} /></h3>
                 <div className="h-48 flex items-end justify-between gap-1 md:gap-2 px-1">
                   {analyticsData.map((day, idx) => (
                     <div key={idx} className="flex-1 flex flex-col items-center group relative h-full justify-end">
