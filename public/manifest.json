@@ -1,0 +1,16 @@
+{
+  "short_name": "DailyEngine",
+  "name": "Daily Engine Routine",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3593/3593504.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#18181b",
+  "background_color": "#ffffff"
+}
+
