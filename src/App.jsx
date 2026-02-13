@@ -11,12 +11,16 @@ import {
   Moon, 
   AlertCircle,
   Bell,
-  BellOff
+  BellOff,
+  BarChart3,
+  X,
+  History
 } from 'lucide-react';
 
 const App = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
   const lastNotifiedTask = useRef(null);
 
   const [completedTasks, setCompletedTasks] = useState(() => {
@@ -26,6 +30,11 @@ const App = () => {
     
     if (lastReset !== today) return [];
     return saved ? JSON.parse(saved) : [];
+  });
+
+  const [history, setHistory] = useState(() => {
+    const saved = localStorage.getItem('routine_history');
+    return saved ? JSON.parse(saved) : {};
   });
 
   const schedules = {
@@ -72,7 +81,6 @@ const App = () => {
   const isOffDay = dayOfWeek === 0 || dayOfWeek === 1;
   const activeSchedule = isOffDay ? schedules.offDay : schedules.college;
 
-  // Notification Logic
   const requestNotificationPermission = async () => {
     if (!("Notification" in window)) return;
     const permission = await Notification.requestPermission();
@@ -91,7 +99,6 @@ const App = () => {
     return activeSchedule.find(item => nowStr >= item.time && nowStr < item.end) || activeSchedule[0];
   }, [currentTime, activeSchedule]);
 
-  // Trigger Notification when currentTask changes
   useEffect(() => {
     if (notificationsEnabled && currentTask && lastNotifiedTask.current !== currentTask.id) {
       new Notification(`New Task: ${currentTask.label}`, {
@@ -108,9 +115,23 @@ const App = () => {
   }, []);
 
   useEffect(() => {
+    const todayStr = new Date().toDateString();
     localStorage.setItem('routine_completed_tasks', JSON.stringify(completedTasks));
-    localStorage.setItem('routine_last_reset', new Date().toDateString());
-  }, [completedTasks]);
+    localStorage.setItem('routine_last_reset', todayStr);
+
+    const completionRate = activeSchedule.length > 0 
+      ? Math.round((completedTasks.length / activeSchedule.length) * 100)
+      : 0;
+
+    setHistory(prev => {
+      const updated = {
+        ...prev,
+        [todayStr]: completionRate
+      };
+      localStorage.setItem('routine_history', JSON.stringify(updated));
+      return updated;
+    });
+  }, [completedTasks, activeSchedule.length]);
 
   const toggleTask = (id) => {
     setCompletedTasks(prev => 
@@ -120,11 +141,100 @@ const App = () => {
 
   const progress = Math.round((completedTasks.length / activeSchedule.length) * 100);
 
+  // FIXED ANALYTICS HELPERS
+  const analyticsData = useMemo(() => {
+    const dates = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const str = d.toDateString();
+      // Ensure we have a number even if history is empty
+      const value = history[str] !== undefined ? history[str] : 0;
+      dates.push({
+        label: d.toLocaleDateString(undefined, { weekday: 'short' }),
+        value: value,
+        fullDate: str,
+        isToday: str === new Date().toDateString()
+      });
+    }
+    return dates;
+  }, [history]);
+
+  const streakCount = useMemo(() => {
+    let count = 0;
+    const historyKeys = Object.keys(history).sort((a, b) => new Date(b) - new Date(a));
+    
+    for (let key of historyKeys) {
+      if (history[key] >= 80) { // Threshold for streak: 80% completion
+        count++;
+      } else {
+        if (key === new Date().toDateString()) continue; // Ignore today if not yet complete
+        break;
+      }
+    }
+    return count;
+  }, [history]);
+
   return (
     <div className="min-h-screen bg-white text-zinc-900 font-sans p-4 md:p-8">
-      <div className="max-w-2xl mx-auto border-2 border-zinc-900 shadow-[8px_8px_0px_0px_rgba(24,24,27,1)] overflow-hidden">
+      <div className="max-w-2xl mx-auto border-2 border-zinc-900 shadow-[8px_8px_0px_0px_rgba(24,24,27,1)] overflow-hidden relative">
         
-        {/* Header Section */}
+        {showAnalytics && (
+          <div className="absolute inset-0 z-50 bg-white border-b-2 border-zinc-900 flex flex-col animate-in slide-in-from-top duration-300">
+            <div className="p-6 bg-zinc-900 text-white flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <BarChart3 size={20} className="text-amber-400" />
+                <h2 className="text-2xl font-black uppercase italic tracking-tighter">Performance Lab</h2>
+              </div>
+              <button 
+                onClick={() => setShowAnalytics(false)}
+                className="bg-white text-zinc-900 p-1 border-2 border-zinc-900 shadow-[2px_2px_0px_0px_rgba(255,255,255,0.3)] hover:translate-x-0.5 hover:translate-y-0.5 transition-transform"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6 flex-grow overflow-y-auto">
+              <div className="grid grid-cols-1 gap-6">
+                <div className="border-2 border-zinc-900 p-6 bg-zinc-50 shadow-[4px_4px_0px_0px_rgba(24,24,27,1)]">
+                  <h3 className="text-xs font-black uppercase mb-8 flex items-center gap-2 text-zinc-500">
+                    <History size={14} /> 7-Day Completion Rate
+                  </h3>
+                  <div className="h-48 flex items-end justify-between gap-1 md:gap-2 px-1">
+                    {analyticsData.map((day, idx) => (
+                      <div key={idx} className="flex-1 flex flex-col items-center group relative h-full justify-end">
+                        <div className="absolute -top-6 bg-zinc-900 text-white text-[10px] px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity font-mono z-10 whitespace-nowrap">
+                          {day.value}%
+                        </div>
+                        <div 
+                          className={`w-full border-2 border-zinc-900 transition-all duration-700 ease-out ${day.isToday ? 'bg-amber-400' : 'bg-zinc-300'} group-hover:brightness-95`}
+                          style={{ height: `${Math.max(day.value, 5)}%` }} // Show min 5% for visibility
+                        />
+                        <span className={`text-[9px] md:text-[10px] font-black uppercase mt-2 ${day.isToday ? 'text-zinc-900' : 'text-zinc-400'}`}>
+                          {day.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="border-2 border-zinc-900 p-4 bg-emerald-50 shadow-[4px_4px_0px_0px_rgba(16,185,129,0.2)]">
+                    <p className="text-[10px] font-black uppercase text-emerald-700">Streak (80%+)</p>
+                    <p className="text-3xl font-black italic">{streakCount} Days</p>
+                  </div>
+                  <div className="border-2 border-zinc-900 p-4 bg-amber-50 shadow-[4px_4px_0px_0px_rgba(245,158,11,0.2)]">
+                    <p className="text-[10px] font-black uppercase text-amber-700">Weekly Avg</p>
+                    <p className="text-3xl font-black italic">
+                      {Math.round(analyticsData.reduce((acc, curr) => acc + curr.value, 0) / 7)}%
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <header className="bg-zinc-900 text-white p-6 border-b-2 border-zinc-900">
           <div className="flex justify-between items-center mb-6">
             <div className="space-y-1">
@@ -134,13 +244,22 @@ const App = () => {
                   <Calendar size={14} className="text-amber-400" />
                   <span>{isOffDay ? 'STATUS: OFF-DAY' : 'STATUS: COLLEGE'}</span>
                 </div>
-                <button 
-                  onClick={requestNotificationPermission}
-                  className={`p-1 rounded transition-colors ${notificationsEnabled ? 'text-emerald-400 bg-emerald-400/10' : 'text-zinc-500 bg-white/5'}`}
-                  title={notificationsEnabled ? "Notifications Active" : "Enable Notifications"}
-                >
-                  {notificationsEnabled ? <Bell size={16} /> : <BellOff size={16} />}
-                </button>
+                <div className="flex items-center gap-1">
+                  <button 
+                    onClick={requestNotificationPermission}
+                    className={`p-1 rounded transition-colors ${notificationsEnabled ? 'text-emerald-400 bg-emerald-400/10' : 'text-zinc-500 bg-white/5'}`}
+                    title={notificationsEnabled ? "Notifications Active" : "Enable Notifications"}
+                  >
+                    {notificationsEnabled ? <Bell size={16} /> : <BellOff size={16} />}
+                  </button>
+                  <button 
+                    onClick={() => setShowAnalytics(true)}
+                    className="p-1 rounded transition-colors text-amber-400 bg-white/5 hover:bg-white/10"
+                    title="View Analytics"
+                  >
+                    <BarChart3 size={16} />
+                  </button>
+                </div>
               </div>
             </div>
             <div className="text-right">
@@ -163,7 +282,6 @@ const App = () => {
           </div>
         </header>
 
-        {/* Current Active Task */}
         <div className="p-6 bg-amber-50 border-b-2 border-zinc-900 flex justify-between items-center">
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -178,7 +296,6 @@ const App = () => {
           </div>
         </div>
 
-        {/* Timeline */}
         <div className="p-0">
           {activeSchedule.map((item) => {
             const isCompleted = completedTasks.includes(item.id);
@@ -192,10 +309,10 @@ const App = () => {
                   isCurrent ? 'bg-zinc-100' : isCompleted ? 'bg-zinc-50' : 'bg-white hover:bg-zinc-50'
                 }`}
               >
-                <div className={`w-20 p-4 font-mono text-xs font-black border-r-2 border-zinc-900 flex flex-col justify-center items-center ${isCurrent ? 'bg-zinc-900 text-white' : 'text-zinc-500'}`}>
+                <div className={`w-24 p-4 font-mono text-xs font-black border-r-2 border-zinc-900 flex flex-col justify-center items-center ${isCurrent ? 'bg-zinc-900 text-white' : 'text-zinc-500'}`}>
                   <span>{item.time}</span>
                   <div className={`w-0.5 h-4 my-1 ${isCurrent ? 'bg-white/20' : 'bg-zinc-200'}`} />
-                  <span>{item.end.split(':')[0]}:{item.end.split(':')[1]}</span>
+                  <span>{item.end}</span>
                 </div>
 
                 <div className={`flex-grow p-4 flex items-center gap-4 ${isCompleted ? 'opacity-40 grayscale' : ''}`}>
@@ -223,11 +340,15 @@ const App = () => {
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">DISCIPLINE IS FREEDOM</p>
         <button 
           onClick={() => {
-            if(window.confirm('Reset daily tasks?')) setCompletedTasks([]);
+            if(window.confirm('Reset all engine data including history?')) {
+              setCompletedTasks([]);
+              setHistory({});
+              localStorage.clear();
+            }
           }}
           className="text-[10px] font-black uppercase tracking-tighter border-b-2 border-zinc-900 hover:text-zinc-500 hover:border-zinc-300"
         >
-          Flush Data
+          Factory Reset
         </button>
       </div>
     </div>
